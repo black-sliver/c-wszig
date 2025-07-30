@@ -1,0 +1,19 @@
+.{
+    .name = .c_wszig,
+    .version = "0.0.0",
+    .fingerprint = 0xd61dc91aeeaa8ad4, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{
+        .websocket = .{
+            .url = "git+https://github.com/karlseguin/websocket.zig.git#ab9afcf4383951c5ea8fc98a8d077ad2a65a7440",
+            .hash = "websocket-0.1.0-ZPISdeVzAwCynP9Y0vEL_teWXXjzpsxdlBZ2T00FDqEI",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "README.md",
+        //"LICENSE",
+    },
+}

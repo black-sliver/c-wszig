@@ -1,0 +1,34 @@
+name: Build binaries
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: mlugg/setup-zig@8d6198c65fb0feaa111df26e6b467fea8345e46f
+      with:
+        version: 0.14.1
+    - name: "Build"
+      run: |
+        mkdir dist
+        # zig build -Doptimize=ReleaseSmall -Dtarget=x86-linux-gnu
+        # mv zig-out/lib/*.so dist/c-wspp-linux-x86.so
+        zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-linux-gnu
+        mv zig-out/lib/*.so dist/c-wspp-linux-amd64.so
+        # zig build -Doptimize=ReleaseSmall -Dtarget=x86-macos
+        # mv zig-out/lib/*.dylib dist/c-wspp-macos-x86.dylib
+        zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-macos
+        mv zig-out/lib/*.dylib dist/c-wspp-macos-amd64.dylib
+        zig build -Doptimize=ReleaseSmall -Dtarget=x86-windows
+        mv zig-out/bin/*.dll dist/c-wspp-win32.dll
+        zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-windows
+        mv zig-out/bin/*.dll dist/c-wspp-win64.dll
+    - name: Store dist
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist
