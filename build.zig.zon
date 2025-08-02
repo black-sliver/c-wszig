@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .websocket = .{
-            .url = "git+https://github.com/karlseguin/websocket.zig.git#ab9afcf4383951c5ea8fc98a8d077ad2a65a7440",
-            .hash = "websocket-0.1.0-ZPISdeVzAwCynP9Y0vEL_teWXXjzpsxdlBZ2T00FDqEI",
+            .url = "git+https://github.com/karlseguin/websocket.zig.git#7240830dc8d1ab426d408cb76144794169943aa9",
+            .hash = "websocket-0.1.0-ZPISdRJ0AwBHOWGe9mnKAUU2hXEXhfdbsW3smK4zpY97",
         },
     },
     .paths = .{
