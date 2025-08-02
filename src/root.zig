@@ -109,12 +109,12 @@ pub fn poll(self: *Self) u64 {
         switch (message.type) {
             .text => {
                 if (self.on_message) |f| {
-                    f(message.data.ptr, message.data.len, @intFromEnum(websocket.proto.OpCode.text));
+                    f(message.data.ptr, @intCast(message.data.len), @intFromEnum(websocket.proto.OpCode.text) & 0x7f);
                 }
             },
             .binary => {
                 if (self.on_message) |f| {
-                    f(message.data.ptr, message.data.len, @intFromEnum(websocket.proto.OpCode.binary));
+                    f(message.data.ptr, @intCast(message.data.len), @intFromEnum(websocket.proto.OpCode.binary) & 0x7f);
                 }
             },
             .close => {
