@@ -23,7 +23,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/sample.zig"),
         .target = target,
         .optimize = optimize,
-        .link_libc = true,  // currently required for std.DynLib
+        .link_libc = true, // currently required for std.DynLib
     });
 
     const websocket_dep = b.dependency("websocket", .{});
@@ -36,7 +36,6 @@ pub fn build(b: *std.Build) void {
         .name = "c-wspp",
         .root_module = lib_mod,
         .pic = true,
-
     });
 
     b.installArtifact(lib);

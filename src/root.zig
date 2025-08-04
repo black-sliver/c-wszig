@@ -29,11 +29,11 @@ const conv = CallingConvention.c;
 
 const Self = @This();
 
-const OnOpenCallback = * const fn() callconv(conv) void;
-const OnCloseCallback = * const fn() callconv(conv) void;
-const OnMessageCallback = * const fn([*]const u8, u64, i32) callconv(conv) void;
-const OnErrorCallback = * const fn([*:0]const u8) callconv(conv) void;
-const OnPongCallback = * const fn([*]const u8, u64) callconv(conv) void;
+const OnOpenCallback = *const fn () callconv(conv) void;
+const OnCloseCallback = *const fn () callconv(conv) void;
+const OnMessageCallback = *const fn ([*]const u8, u64, i32) callconv(conv) void;
+const OnErrorCallback = *const fn ([*:0]const u8) callconv(conv) void;
+const OnPongCallback = *const fn ([*]const u8, u64) callconv(conv) void;
 
 pub fn init(allocator: mem.Allocator, uri: Uri) !Self {
     var arena = heap.ArenaAllocator.init(allocator);
@@ -100,7 +100,7 @@ pub fn poll(self: *Self) u64 {
                     f("Read failed");
                 }
                 break;
-            }
+            },
         } orelse {
             break;
         };
@@ -152,29 +152,21 @@ pub fn stopped(self: *Self) bool {
 pub fn connect(self: *Self) !void {
     const is_default_port = (self.tls and self.port == 443) or (!self.tls and self.port == 80);
     const headers = if (is_default_port)
-        try std.fmt.allocPrint(
-            self.allocator,
-            "Host: {s}\r\n",
-            .{self.host}
-        )
-        else
-        try std.fmt.allocPrint(
-            self.allocator,
-            "Host: {s}:{d}\r\n",
-            .{self.host, self.port}
-        );
+        try std.fmt.allocPrint(self.allocator, "Host: {s}\r\n", .{self.host})
+    else
+        try std.fmt.allocPrint(self.allocator, "Host: {s}:{d}\r\n", .{ self.host, self.port });
     defer self.allocator.free(headers);
     // TODO: make this non-blocking (in a thread?)
     self.client = try websocket.Client.init(self.allocator, .{
         .host = self.host,
         .port = self.port,
-        .max_size = 100*1024*1024, // 100MiB should be safe
+        .max_size = 100 * 1024 * 1024, // 100MiB should be safe
         .tls = self.tls,
         .compression = .{
             .write_threshold = 16,
             //.client_no_context_takeover = true,
             //.server_no_context_takeover = true,
-        }
+        },
     });
     var client = &self.client.?;
     errdefer {
@@ -185,7 +177,7 @@ pub fn connect(self: *Self) !void {
         .timeout_ms = 4500, // less than 5sec for multiclient
         .headers = headers,
     });
-    errdefer client.close(.{.code = 1001, .reason = "Internal Error"}) catch unreachable;
+    errdefer client.close(.{ .code = 1001, .reason = "Internal Error" }) catch unreachable;
     if (client._compression != null and
         client._compression.?.reset and
         client._compression.?.write_treshold < 150)
@@ -194,7 +186,7 @@ pub fn connect(self: *Self) !void {
         client._compression.?.write_treshold = 150;
     }
     try client.readTimeout(1);
-    self.open = true;  // TODO: atomic
+    self.open = true; // TODO: atomic
 }
 
 pub fn close(self: *Self, code: u16, reason: []const u8) !void {

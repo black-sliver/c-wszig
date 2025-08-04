@@ -46,11 +46,11 @@ const Lib = struct {
         sendText: *const fn (?*WS, CStr) callconv(conv) WsppError,
         sendBinary: *const fn (?*WS, *anyopaque, u64) callconv(conv) WsppError,
         ping: *const fn (?*WS, *const anyopaque, u64) callconv(conv) WsppError,
-        setOpenHandler: *const fn(?*WS, *const fn () callconv(conv) void ) callconv(conv) void,
-        setCloseHandler: *const fn(?*WS, *const fn () callconv(conv) void) callconv(conv) void,
-        setMessageHandler: *const fn(?*WS, *const fn (CStr, u64, i32) callconv(conv) void) callconv(conv) void,
-        setErrorHandler: *const fn(?*WS, *const fn (CStr) callconv(conv) void) callconv(conv) void,
-        setPongHandler: *const fn(?*WS, *const fn (CStr, u64) callconv(conv) void) callconv(conv) void,
+        setOpenHandler: *const fn (?*WS, *const fn () callconv(conv) void) callconv(conv) void,
+        setCloseHandler: *const fn (?*WS, *const fn () callconv(conv) void) callconv(conv) void,
+        setMessageHandler: *const fn (?*WS, *const fn (CStr, u64, i32) callconv(conv) void) callconv(conv) void,
+        setErrorHandler: *const fn (?*WS, *const fn (CStr) callconv(conv) void) callconv(conv) void,
+        setPongHandler: *const fn (?*WS, *const fn (CStr, u64) callconv(conv) void) callconv(conv) void,
     };
 
     fn init(path: []const u8) !Lib {
@@ -68,8 +68,7 @@ const Lib = struct {
         var res: Funcs = undefined;
         inline for (@typeInfo(Funcs).@"struct".fields) |f| {
             const symbol = "wspp_" ++ comptime @"🐍"(f.name);
-            @field(res, f.name) = lib.lookup(f.type, symbol)
-                orelse return error.MethodNotFound;
+            @field(res, f.name) = lib.lookup(f.type, symbol) orelse return error.MethodNotFound;
         }
         return res;
     }
@@ -90,7 +89,7 @@ fn onClose() callconv(conv) void {
 fn onMessage(data: CStr, len: u64, op_code: i32) callconv(conv) void {
     const dataPtr: [*]const u8 = @ptrCast(data);
     const slice = dataPtr[0..@intCast(len)];
-    std.debug.print("onMessage ({}): {s}\n", .{op_code, slice});
+    std.debug.print("onMessage ({}): {s}\n", .{ op_code, slice });
 }
 
 fn onError(msg: CStr) callconv(conv) void {
