@@ -16,9 +16,10 @@ const CStr = [*c]const u8;
 var opt_gpa: ?std.heap.DebugAllocator(.{}) = null;
 
 const WsppError = enum(c_int) {
-    ok = 0,
-    invalid_state = 1,
-    unknown = -1,
+    OK = 0,
+    InvalidState = 1,
+    InvalidArgument = 2,
+    Unknown = -1,
 };
 
 fn wspp_init() callconv(conv) void {
@@ -100,31 +101,31 @@ pub export fn wspp_stopped(wspp: ?*WS) callconv(conv) c_int {
 pub export fn wspp_connect(wspp: ?*WS) callconv(conv) c_int {
     if (wspp) |ptr| {
         ptr.connect() catch |err| switch (err) {
-            else => return @intFromEnum(WsppError.unknown),
+            else => return @intFromEnum(WsppError.Unknown),
         };
-        return @intFromEnum(WsppError.ok);
+        return @intFromEnum(WsppError.OK);
     }
-    return @intFromEnum(WsppError.invalid_state);
+    return @intFromEnum(WsppError.InvalidState);
 }
 
 pub export fn wspp_close(wspp: ?*WS, code: u16, reason: CStr) callconv(conv) c_int {
     if (wspp) |ptr| {
         ptr.close(code, mem.span(reason)) catch |err| switch (err) {
-            else => return @intFromEnum(WsppError.unknown),
+            else => return @intFromEnum(WsppError.Unknown),
         };
-        return @intFromEnum(WsppError.ok);
+        return @intFromEnum(WsppError.OK);
     }
-    return @intFromEnum(WsppError.invalid_state);
+    return @intFromEnum(WsppError.InvalidState);
 }
 
 pub export fn wspp_send_text(wspp: ?*WS, message: CStr) callconv(conv) c_int {
     if (wspp) |ptr| {
         ptr.sendText(mem.span(message)) catch |err| switch (err) {
-            else => return @intFromEnum(WsppError.unknown),
+            else => return @intFromEnum(WsppError.Unknown),
         };
-        return @intFromEnum(WsppError.ok);
+        return @intFromEnum(WsppError.OK);
     }
-    return @intFromEnum(WsppError.invalid_state);
+    return @intFromEnum(WsppError.InvalidState);
 }
 
 pub export fn wspp_send_binary(wspp: ?*WS, message: CStr, length: u64) callconv(conv) c_int {
@@ -133,24 +134,26 @@ pub export fn wspp_send_binary(wspp: ?*WS, message: CStr, length: u64) callconv(
         const msgPtr: [*]const u8 = @ptrCast(message);
         const slice = msgPtr[0..@intCast(length)];
         ptr.sendBinary(slice) catch |err| switch (err) {
-            else => return @intFromEnum(WsppError.unknown),
+            else => return @intFromEnum(WsppError.Unknown),
         };
-        return @intFromEnum(WsppError.ok);
+        return @intFromEnum(WsppError.OK);
     }
-    return @intFromEnum(WsppError.invalid_state);
+    return @intFromEnum(WsppError.InvalidState);
 }
 
 pub export fn wspp_ping(wspp: ?*WS, message: CStr, length: u64) callconv(conv) c_int {
-    // TODO: error out if length > usize_max
     if (wspp) |ptr| {
+        if (length > 125) {
+            return @intFromEnum(WsppError.InvalidArgument);
+        }
         const msgPtr: [*]const u8 = @ptrCast(message);
         const slice = msgPtr[0..@intCast(length)];
         ptr.ping(slice) catch |err| switch (err) {
-            else => return @intFromEnum(WsppError.unknown),
+            else => return @intFromEnum(WsppError.Unknown),
         };
-        return @intFromEnum(WsppError.ok);
+        return @intFromEnum(WsppError.OK);
     }
-    return @intFromEnum(WsppError.invalid_state);
+    return @intFromEnum(WsppError.InvalidState);
 }
 
 pub export fn wspp_set_open_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {

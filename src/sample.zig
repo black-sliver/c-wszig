@@ -11,9 +11,10 @@ const conv = CallingConvention.c;
 const WS = opaque {};
 
 const WsppError = enum(c_int) {
-    ok = 0,
-    invalid_state = 1,
-    unknown = -1,
+    OK = 0,
+    InvalidState = 1,
+    InvalidArgument = 2,
+    Unknown = -1,
     _,
 };
 
