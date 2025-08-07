@@ -73,9 +73,6 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn poll(self: *Self) u64 {
-    // TODO: select() instead of relying on read timeout
-    //       or at least count the actual time taken and break early
-    //       or run in another thread and capture one reply
     var client = &(self.client orelse {
         if (self.on_error) |f| {
             f("Invalid State");
@@ -153,7 +150,7 @@ pub fn poll(self: *Self) u64 {
 }
 
 pub fn run(self: *Self) u64 {
-    self.client.?.readTimeout(0) catch {}; // if this fails, we need to poll in a loop
+    _ = self;
     @panic("ws.run not implemented");
 }
 
@@ -200,7 +197,7 @@ pub fn connect(self: *Self) !void {
         // if there is no context takeover, we don't want to send messages compressed that won't get smaller
         client._compression.?.write_treshold = 150;
     }
-    try client.readTimeout(1);
+    try client.readTimeout(1); // NOTE: this doesn't work on Windows
     self.open = true; // TODO: atomic
 }
 
