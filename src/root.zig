@@ -5,6 +5,7 @@ host: []u8,
 port: u16,
 path: []u8,
 tls: bool,
+mutex: Thread.Mutex, // used to not get interleaved writes, also on Windows we can't read and write at the same time
 client: ?websocket.Client = null,
 on_open: ?OnOpenCallback = null,
 on_close: ?OnCloseCallback = null,
@@ -14,6 +15,7 @@ on_pong: ?OnPongCallback = null,
 open: bool = false,
 open_fired: bool = false,
 
+const builtin = @import("builtin");
 const std = @import("std");
 const ascii = std.ascii;
 const heap = std.heap;
@@ -22,6 +24,7 @@ const websocket = @import("websocket");
 const testing = std.testing;
 const Uri = std.Uri;
 const CallingConvention = std.builtin.CallingConvention;
+const Thread = std.Thread;
 
 // TODO: wrap in lib.zig instead
 //const conv = if (builtin.target.os.tag == .windows) CallingConvention.winapi else CallingConvention.c;
@@ -55,6 +58,7 @@ pub fn init(allocator: mem.Allocator, uri: Uri) !Self {
         .port = port,
         .path = path,
         .tls = tls,
+        .mutex = .{},
     };
 }
 
@@ -86,7 +90,14 @@ pub fn poll(self: *Self) u64 {
         }
     }
     var events: u64 = 0;
+    var locked = false;
     for (0..16) |_| {
+        if (comptime builtin.target.os.tag == .windows) {
+            // On Windows, we can't read and write at the same time
+            self.mutex.lock();
+            locked = true;
+        }
+        defer if (locked) self.mutex.unlock();
         const message = client.read() catch |err| switch (err) {
             error.Closed => {
                 // TODO: if onClose not sent, send now maybe?
@@ -105,6 +116,8 @@ pub fn poll(self: *Self) u64 {
             break;
         };
         defer client.done(message);
+        self.mutex.unlock();
+        locked = false;
         events += 1;
         switch (message.type) {
             .text => {
@@ -124,6 +137,8 @@ pub fn poll(self: *Self) u64 {
                 }
             },
             .ping => {
+                self.mutex.lock();
+                defer self.mutex.unlock();
                 client.writePong(message.data) catch {};
             },
             .pong => {
@@ -213,6 +228,8 @@ pub fn sendText(self: *Self, message: []const u8) !void {
     // TODO: arena for those dupes?
     const messageCopy = try self.allocator.dupe(u8, message);
     defer self.allocator.free(messageCopy);
+    self.mutex.lock();
+    defer self.mutex.unlock();
     try client.writeText(messageCopy);
 }
 
@@ -223,6 +240,8 @@ pub fn sendBinary(self: *Self, message: []const u8) !void {
     // TODO: arena for those dupes?
     const messageCopy = try self.allocator.dupe(u8, message);
     defer self.allocator.free(messageCopy);
+    self.mutex.lock();
+    defer self.mutex.unlock();
     try client.writeBin(messageCopy);
 }
 
@@ -233,5 +252,7 @@ pub fn ping(self: *Self, message: []const u8) !void {
     // TODO: arena for those dupes?
     const messageCopy = try self.allocator.dupe(u8, message);
     defer self.allocator.free(messageCopy);
+    self.mutex.lock();
+    defer self.mutex.unlock();
     try client.writePing(messageCopy);
 }
