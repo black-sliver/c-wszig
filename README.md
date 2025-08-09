@@ -1,6 +1,6 @@
 # c-wszig
 
-C bindings for zig websocket (Client only)
+C bindings for zig websocket (Client only).
 
 This should hopefully be a drop-in replacement for [c-wspp](https://github.com/black-sliver/c-wspp),
 which is also why the symbols start with `wspp_`.
@@ -12,6 +12,19 @@ The build/release workflow renames the files to what the dynamic loader in c-wsp
 ## API
 
 See [c-wspp#API](https://github.com/black-sliver/c-wspp?tab=readme-ov-file#api) for now.
+
+### API Differences
+
+* `wspp_open` is blocking for now and may not have a good timeout.
+
+## Other Differences to c-wspp
+
+* c-wszig uses Zig's TLS, which supports fewer features and is not as well tested as OpenSSL,
+  but it's a lot smaller, avoids dynamic linker issues and has smart system root cert discovery.
+* c-wszig supports compression with context takeover; the latest version of c-wspp did not include any compression,
+  adding compression **without context takeover** would be possible.
+* c-wszig builts are better reproducible - we lost clang32 in msys2 and so 32bit support of c-wspp would need a
+  different toolchain now.
 
 ## Supported Platforms
 
