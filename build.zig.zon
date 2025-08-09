@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .websocket = .{
-            .url = "git+https://github.com/black-sliver/websocket.zig.git#e36ee7b81f8f23a62d58da3e645f15e15aa30030",
-            .hash = "websocket-0.1.0-ZPISddF3AwBeVlqaVpb3ILl1ytrRSyle3WwbQdJ91VWq",
+            .url = "git+https://github.com/black-sliver/websocket.zig.git?ref=feat/win32-nonblocking#7470ee51d3257f98b11862c70cf2270be6fbfdbf",
+            .hash = "websocket-0.1.0-ZPISdUR5AwBe6uH3zRf1OJJdjFdlH82AXwDGxu3lfWX8",
         },
     },
     .paths = .{

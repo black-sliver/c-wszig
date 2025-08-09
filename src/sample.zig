@@ -151,14 +151,20 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit(); // enable this to find memory leaks, disable this to reduce noise
 
-    const exe_dir = try fs.selfExeDirPathAlloc(allocator);
+    const exe_dir = fs.selfExeDirPathAlloc(allocator) catch |err| switch (err) {
+        // if exeDir fails Unexpected, we assume testing in wine, which uses unsupported UNC paths
+        error.Unexpected => if (builtin.target.os.tag == .windows) try allocator.dupe(u8, ".\\zig-out\\bin") else {
+            return err;
+        },
+        else => return err,
+    };
     defer allocator.free(exe_dir);
     var dll_path_parts = [_][]const u8{exe_dir, relative_dll_name};
     const dll_path = try fs.path.join(allocator, &dll_path_parts);
 
     defer allocator.free(dll_path);
 
-    std.debug.print("Loading DLL\n", .{});
+    std.debug.print("Loading DLL {s}\n", .{dll_path});
     var lib = try Lib.init(dll_path);
     defer lib.deinit();
 
