@@ -113,8 +113,10 @@ pub fn poll(self: *Self) u64 {
             break;
         };
         defer client.done(message);
-        self.mutex.unlock();
-        locked = false;
+        if (locked) {
+            self.mutex.unlock();
+            locked = false;
+        }
         events += 1;
         switch (message.type) {
             .text => {
