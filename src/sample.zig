@@ -134,7 +134,7 @@ fn onPong(data: CStr, len: u64) callconv(conv) void {
         if (mem.eql(u8, ping_msg, slice)) {
             state = .GotPong;
         } else {
-            std.debug.print("  expected {s} but got {s}\n", .{ping_msg, slice});
+            std.debug.print("  expected {s} but got {s}\n", .{ ping_msg, slice });
         }
     }
 }
@@ -159,7 +159,7 @@ pub fn main() !void {
         else => return err,
     };
     defer allocator.free(exe_dir);
-    var dll_path_parts = [_][]const u8{exe_dir, relative_dll_name};
+    var dll_path_parts = [_][]const u8{ exe_dir, relative_dll_name };
     const dll_path = try fs.path.join(allocator, &dll_path_parts);
 
     defer allocator.free(dll_path);
@@ -286,22 +286,21 @@ pub fn main() !void {
     lib.f.delete(ws);
 }
 
-
 const websocket = @import("websocket");
 
 const TestServer = websocket.Server(TestServerHandler);
 
-fn runTestServer(allocator: mem.Allocator, port: u16) !struct{TestServer, Thread} {
+fn runTestServer(allocator: mem.Allocator, port: u16) !struct { TestServer, Thread } {
     var server = try TestServer.init(allocator, .{
         .port = port,
         .address = "127.0.0.1",
         .worker_count = 1,
         .handshake = .{
             .max_headers = 0,
-        }
+        },
     });
     const thread = try server.listenInNewThread(&{});
-    return .{server, thread};
+    return .{ server, thread };
 }
 
 const TestServerHandler = struct {
