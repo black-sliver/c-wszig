@@ -156,31 +156,31 @@ pub export fn wspp_ping(wspp: ?*WS, message: CStr, length: u64) callconv(conv) c
     return @intFromEnum(WsppError.InvalidState);
 }
 
-pub export fn wspp_set_open_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {
+pub export fn wspp_set_open_handler(wspp: ?*WS, f: ?WS.OnOpenCallback) callconv(conv) void {
     if (wspp) |ptr| {
         ptr.on_open = @ptrCast(f);
     }
 }
 
-pub export fn wspp_set_close_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {
+pub export fn wspp_set_close_handler(wspp: ?*WS, f: ?WS.OnCloseCallback) callconv(conv) void {
     if (wspp) |ptr| {
         ptr.on_close = @ptrCast(f);
     }
 }
 
-pub export fn wspp_set_message_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {
+pub export fn wspp_set_message_handler(wspp: ?*WS, f: ?WS.OnMessageCallback) callconv(conv) void {
     if (wspp) |ptr| {
         ptr.on_message = @ptrCast(f);
     }
 }
 
-pub export fn wspp_set_error_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {
+pub export fn wspp_set_error_handler(wspp: ?*WS, f: ?WS.OnErrorCallback) callconv(conv) void {
     if (wspp) |ptr| {
         ptr.on_error = @ptrCast(f);
     }
 }
 
-pub export fn wspp_set_pong_handler(wspp: ?*WS, f: ?*anyopaque) callconv(conv) void {
+pub export fn wspp_set_pong_handler(wspp: ?*WS, f: ?WS.OnPongCallback) callconv(conv) void {
     if (wspp) |ptr| {
         ptr.on_pong = @ptrCast(f);
     }

@@ -32,11 +32,11 @@ const conv = CallingConvention.c;
 
 const Self = @This();
 
-const OnOpenCallback = *const fn () callconv(conv) void;
-const OnCloseCallback = *const fn () callconv(conv) void;
-const OnMessageCallback = *const fn ([*]const u8, u64, i32) callconv(conv) void;
-const OnErrorCallback = *const fn ([*:0]const u8) callconv(conv) void;
-const OnPongCallback = *const fn ([*]const u8, u64) callconv(conv) void;
+pub const OnOpenCallback = *const fn () callconv(conv) void;
+pub const OnCloseCallback = *const fn () callconv(conv) void;
+pub const OnMessageCallback = *const fn ([*]const u8, u64, i32) callconv(conv) void;
+pub const OnErrorCallback = *const fn ([*:0]const u8) callconv(conv) void;
+pub const OnPongCallback = *const fn ([*]const u8, u64) callconv(conv) void;
 
 pub fn init(allocator: mem.Allocator, uri: Uri) !Self {
     var arena = heap.ArenaAllocator.init(allocator);
