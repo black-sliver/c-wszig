@@ -23,7 +23,7 @@ See [c-wspp#API](https://github.com/black-sliver/c-wspp?tab=readme-ov-file#api) 
   but it's a lot smaller, avoids dynamic linker issues and has smart system root cert discovery.
 * c-wszig supports compression with context takeover; the latest version of c-wspp did not include any compression,
   adding compression **without context takeover** would be possible.
-* c-wszig builts are better reproducible - we lost clang32 in msys2 and so 32bit support of c-wspp would need a
+* c-wszig builds are better reproducible - we lost clang32 in msys2 and so 32bit support of c-wspp would need a
   different toolchain now.
 
 ## Supported Platforms
