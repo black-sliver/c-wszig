@@ -1,6 +1,6 @@
 .{
     .name = .c_wszig,
-    .version = "0.0.0",
+    .version = "0.1.0",
     .fingerprint = 0xd61dc91aeeaa8ad4, // Changing this has security and trust implications.
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
