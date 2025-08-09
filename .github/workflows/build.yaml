@@ -19,8 +19,6 @@ jobs:
         # mv zig-out/lib/*.so dist/c-wspp-linux-x86.so
         zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-linux-gnu
         mv zig-out/lib/*.so dist/c-wspp-linux-amd64.so
-        # zig build -Doptimize=ReleaseSmall -Dtarget=x86-macos
-        # mv zig-out/lib/*.dylib dist/c-wspp-macos-x86.dylib
         zig build -Doptimize=ReleaseSmall -Dtarget=x86_64-macos
         mv zig-out/lib/*.dylib dist/c-wspp-macos-amd64.dylib
         zig build -Doptimize=ReleaseSmall -Dtarget=x86-windows
