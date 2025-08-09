@@ -45,8 +45,11 @@ jobs:
     - name: Bundle release zip
       if: ${{ startsWith(github.ref, 'refs/tags/v') }}
       run: |
-        RELEASE_NAME=c-wszig-bin_`echo ${{ env.RELEASE_VERSION }} | tr '.' '-'`_all
-        7zz -mx=9 a dist/$RELEASE_NAME.zip dist  # change 7zz to 7z for ubuntu-24.04
+        RELEASE_NAME=c-wszig-bin-all_`echo ${{ env.RELEASE_VERSION }} | tr '.' '-'`
+        cp -r -- dist "$RELEASE_NAME"
+        cp -- LICENSE "$RELEASE_NAME/c-wspp-license.txt"
+        7zz -mx=9 a -- "dist/$RELEASE_NAME.zip" "$RELEASE_NAME"  # change 7zz to 7z for ubuntu-24.04
+        rm -r -- "$RELEASE_NAME"
     - name: Attest builds
       uses: actions/attest-build-provenance@v2
       with:
