@@ -31,6 +31,8 @@ pub fn build(b: *std.Build) void {
     root_mod.addImport("websocket", websocket_dep.module("websocket"));
     lib_mod.addImport("ws", root_mod);
 
+    exe_mod.addImport("websocket", websocket_dep.module("websocket")); // for the test server
+
     const lib = b.addSharedLibrary(.{
         //.linkage = .dynamic,
         .name = "c-wspp",
