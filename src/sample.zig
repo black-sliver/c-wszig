@@ -168,13 +168,16 @@ pub fn main() !void {
     var lib = try Lib.init(dll_path);
     defer lib.deinit();
 
-    var server, var thread = try runTestServer(allocator, 38281);
-    defer {
+    var server: ?TestServer = null;
+    var server_thread: ?Thread = null;
+    server, server_thread = try runTestServer(allocator, 38281);
+    defer if (server != null) {
         time.sleep(1 * time.ns_per_ms); // wait for client connection to be dead
-        server.stop();
-        thread.join();
-        server.deinit();
-    }
+        std.debug.print("Creating socket ...\n", .{});
+        server.?.stop();
+        server_thread.?.join();
+        server.?.deinit();
+    };
     time.sleep(1 * time.ns_per_ms);
 
     std.debug.print("Creating socket ...\n", .{});
@@ -284,6 +287,12 @@ pub fn main() !void {
 
     std.debug.print("Destroying socket ...\n", .{});
     lib.f.delete(ws);
+    std.debug.print("Socket destroyed.\n", .{});
+
+    if (builtin.target.os.tag == .windows and server != null) {
+        // server worker thread may not stop -> just exit
+        std.process.exit(0);
+    }
 }
 
 const websocket = @import("websocket");
