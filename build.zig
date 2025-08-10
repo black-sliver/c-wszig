@@ -33,11 +33,10 @@ pub fn build(b: *std.Build) void {
 
     exe_mod.addImport("websocket", websocket_dep.module("websocket")); // for the test server
 
-    const lib = b.addSharedLibrary(.{
-        //.linkage = .dynamic,
+    const lib = b.addLibrary(.{
+        .linkage = .dynamic,
         .name = "c-wspp",
         .root_module = lib_mod,
-        .pic = true,
     });
 
     b.installArtifact(lib);
@@ -45,7 +44,6 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "sample",
         .root_module = exe_mod,
-        .pic = true,
     });
 
     exe.step.dependOn(&lib.step);

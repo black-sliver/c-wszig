@@ -172,13 +172,13 @@ pub fn main() !void {
     var server_thread: ?Thread = null;
     server, server_thread = try runTestServer(allocator, 38281);
     defer if (server != null) {
-        time.sleep(1 * time.ns_per_ms); // wait for client connection to be dead
+        Thread.sleep(1 * time.ns_per_ms); // wait for client connection to be dead
         std.debug.print("Creating socket ...\n", .{});
         server.?.stop();
         server_thread.?.join();
         server.?.deinit();
     };
-    time.sleep(1 * time.ns_per_ms);
+    Thread.sleep(1 * time.ns_per_ms);
 
     std.debug.print("Creating socket ...\n", .{});
     const ws = lib.f.new("ws://localhost:38281");
@@ -206,7 +206,7 @@ pub fn main() !void {
         if (state == .RoomConnected) {
             break;
         }
-        time.sleep(1 * time.ns_per_ms);
+        Thread.sleep(1 * time.ns_per_ms);
     }
 
     if (state != .RoomConnected) {
@@ -239,7 +239,7 @@ pub fn main() !void {
         if (state == .SlotConnected) {
             break;
         }
-        time.sleep(1 * time.ns_per_ms);
+        Thread.sleep(1 * time.ns_per_ms);
     }
 
     _ = lib.f.ping(ws, ping_msg, ping_msg.len);
@@ -254,7 +254,7 @@ pub fn main() !void {
             break;
         }
         // TODO: break condition
-        time.sleep(1 * time.ns_per_ms);
+        Thread.sleep(1 * time.ns_per_ms);
     }
     if (state != .GotPong) {
         return error.DidNotReceivePong;
@@ -275,7 +275,7 @@ pub fn main() !void {
         if (state == .Closed or state == .Error) {
             break; // onError: Invalid state is fine here
         }
-        time.sleep(1 * time.ns_per_ms);
+        Thread.sleep(1 * time.ns_per_ms);
     }
 
     std.debug.print("Is stopped? ", .{});
