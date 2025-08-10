@@ -45,6 +45,7 @@ See [c-wspp#API](https://github.com/black-sliver/c-wspp?tab=readme-ov-file#api) 
 Fat macOS binaries have to be bundled with `lipo -create`.
 
 [^2]: currently unsupported because the build fails.
+It looks like this will work for ReleaseSmall and ReleaseFast once we switch to Zig 0.15.
 
 [^3]: 32bit macOS is basically not supported anywhere anymore. If this is for a game,
 consider running the Windows version in Wine.
