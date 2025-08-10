@@ -28,8 +28,10 @@ jobs:
         with:
           version: 0.14.1
       - name: Run Tests
+        timeout-minutes: 10  # this step may compile a lot
         run: |
           zig build test
       - name: Run sample
+        timeout-minutes: 2
         run: |
           zig build run
