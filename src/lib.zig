@@ -23,8 +23,7 @@ const WsppError = enum(c_int) {
     Unknown = -1,
 };
 
-fn wspp_init() callconv(conv) void {
-}
+fn wspp_init() callconv(conv) void {}
 
 fn wspp_deinit() callconv(conv) void {
     if (is_debug) {
