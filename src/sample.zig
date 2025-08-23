@@ -96,60 +96,17 @@ const State = enum {
     Error,
 };
 
-var state: State = .None;
-const ping_msg = "test";
-
-fn onOpen() callconv(conv) void {
-    std.debug.print("onOpen\n", .{});
-    state = .Open;
-}
-
-fn onClose() callconv(conv) void {
-    std.debug.print("onClose\n", .{});
-    state = .Closed;
-}
-
-fn onMessage(data: CStr, len: u64, op_code: i32) callconv(conv) void {
-    const dataPtr: [*]const u8 = @ptrCast(data);
-    const slice = dataPtr[0..@intCast(len)];
-    std.debug.print("onMessage ({}): {s}\n", .{ op_code, slice });
-    if (state == .Open) {
-        state = .RoomConnected;
-    }
-    if (state == .SlotConnected) {
-        state = .SlotConnected;
-    }
-}
-
-fn onError(msg: CStr) callconv(conv) void {
-    std.debug.print("onError: {s}\n", .{msg});
-    state = .Error;
-}
-
-fn onPong(data: CStr, len: u64) callconv(conv) void {
-    const data_ptr: [*]const u8 = @ptrCast(data);
-    const slice = data_ptr[0..@intCast(len)];
-    std.debug.print("onPong: {s}\n", .{slice});
-    if (state == .Pinging) {
-        if (mem.eql(u8, ping_msg, slice)) {
-            state = .GotPong;
-        } else {
-            std.debug.print("  expected {s} but got {s}\n", .{ ping_msg, slice });
-        }
-    }
-}
-
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    defer _ = gpa.deinit(); // enable this to find memory leaks, disable this to reduce noise
+
     const relative_dll_name = switch (builtin.target.os.tag) {
         .linux => "../lib/libc-wspp.so",
         .macos => "../lib/libc-wspp.dylib",
         .windows => "..\\bin\\c-wspp.dll",
         else => @panic("unsupported platform"),
     };
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit(); // enable this to find memory leaks, disable this to reduce noise
 
     const exe_dir = fs.selfExeDirPathAlloc(allocator) catch |err| switch (err) {
         // if exeDir fails Unexpected, we assume testing in wine, which uses unsupported UNC paths
@@ -168,15 +125,208 @@ pub fn main() !void {
     var lib = try Lib.init(dll_path);
     defer lib.deinit();
 
+    try mtPingTest(allocator, lib);
+    try syncAPSample(allocator, lib);
+
+    if (builtin.target.os.tag == .windows) { //and server != null)
+        // server worker thread may not stop -> just exit
+        std.process.exit(0);
+    }
+}
+
+var state: State = .None;
+var pongs_received: [128]u8 = undefined;
+const pt_timeout = 500 * time.ns_per_ms;
+
+fn onPTOpen() callconv(conv) void {
+    std.debug.print("onOpen\n", .{});
+    state = .Open;
+}
+
+fn onPTClose() callconv(conv) void {
+    std.debug.print("onClose\n", .{});
+    state = .Closed;
+}
+
+fn onPTMessage(data: CStr, len: u64, op_code: i32) callconv(conv) void {
+    _ = data;
+    _ = len;
+    _ = op_code;
+}
+
+fn onPTError(msg: CStr) callconv(conv) void {
+    std.debug.print("onError: {s}\n", .{msg});
+    state = .Error;
+}
+
+fn onPTPong(data: CStr, len: u64) callconv(conv) void {
+    const data_ptr: [*]const u8 = @ptrCast(data);
+    const slice = data_ptr[0..@intCast(len)];
+    std.debug.assert(len == 1);
+    pongs_received[slice[0] % pongs_received.len] += 1;
+}
+
+fn ptPing(lib: *const Lib, ws: ?*WS, i: u8) void {
+    var data = [_]u8{i};
+    Thread.sleep(1 * time.ns_per_ms);
+    _ = lib.f.ping(ws, &data, data.len);
+    data[0] += pongs_received.len / 2;
+    _ = lib.f.ping(ws, &data, data.len);
+}
+
+fn ptPoll(lib: *const Lib, ws: ?*WS, timeout: u64) !void {
+    var timer = try time.Timer.start();
+    while (timer.read() < timeout) {
+        _ = lib.f.poll(ws);
+        if (lib.f.stopped(ws) != 0) {
+            break;
+        }
+    }
+    if (lib.f.stopped(ws) == 0) {
+        std.debug.print("timeout\n", .{});
+        return error.Timeout;
+    }
+}
+
+fn mtPingTest(allocator: mem.Allocator, lib: Lib) !void {
+    @memset(&pongs_received, 0);
+    state = .None;
+
+    var server: ?TestServer = null;
+    var server_thread: ?Thread = null;
+    server, server_thread = try runTestServer(allocator, 12345);
+    defer if (server != null) {
+        Thread.sleep(1 * time.ns_per_ms); // wait for client connection to be dead
+        if (builtin.target.os.tag != .windows) { // see end of main()
+            std.debug.print("Stopping server ...\n", .{});
+            server.?.stop();
+            server_thread.?.join();
+            server.?.deinit();
+        }
+    };
+    Thread.sleep(1 * time.ns_per_ms);
+
+    std.debug.print("Creating socket ...\n", .{});
+    const ws = lib.f.new("ws://localhost:12345");
+    if (ws == null) {
+        return error.CouldNotCreateSocket;
+    }
+    errdefer lib.f.delete(ws);
+
+    lib.f.setOpenHandler(ws, onPTOpen);
+    lib.f.setCloseHandler(ws, onPTClose);
+    lib.f.setMessageHandler(ws, onPTMessage);
+    lib.f.setErrorHandler(ws, onPTError);
+    lib.f.setPongHandler(ws, onPTPong);
+
+    std.debug.print("Opening socket ... ", .{});
+    const connectErr = lib.f.connect(ws);
+    std.debug.print("{}\n", .{connectErr});
+    if (connectErr != .OK) {
+        return error.CouldNotConnect;
+    }
+    errdefer _ = lib.f.close(ws, 1001, "Going Away");
+
+    var timer = try time.Timer.start();
+
+    std.debug.print("Starting poll thread ...\n", .{});
+    var poll_thread = try Thread.spawn(.{}, ptPoll, .{ &lib, ws, pt_timeout });
+    errdefer poll_thread.join();
+
+    std.debug.print("Starting ping threads ...\n", .{});
+    var ping_threads: [64]Thread = undefined;
+    for (0..ping_threads.len) |i| {
+        ping_threads[i] = try Thread.spawn(.{}, ptPing, .{ &lib, ws, @as(u8, @intCast(i)) });
+    }
+    defer {
+        for (0..ping_threads.len) |i| {
+            ping_threads[i].join();
+        }
+    }
+
+    wait_result: while (true) {
+        if (timer.read() > pt_timeout) {
+            return error.Timeout;
+        }
+        Thread.sleep(1 * time.ns_per_ms);
+        for (0..pongs_received.len) |i| {
+            if (pongs_received[i] > 1) {
+                return error.InvalidPongReceived;
+            }
+            if (pongs_received[i] == 0) {
+                continue :wait_result;
+            }
+        }
+        break; // done
+    }
+
+    const elapsed = timer.read();
+    std.debug.print("Done in {d:.3} ms\n", .{@as(f32, @floatFromInt(elapsed)) / time.ns_per_ms});
+
+    std.debug.print("Closing socket ...\n", .{});
+    _ = lib.f.close(ws, 1001, "Going Away");
+    poll_thread.join();
+    std.debug.print("Destroying socket ...\n", .{});
+    _ = lib.f.delete(ws);
+    std.debug.print("Socket destroyed.\n", .{});
+}
+
+const ping_msg = "test";
+
+fn onAPOpen() callconv(conv) void {
+    std.debug.print("onOpen\n", .{});
+    state = .Open;
+}
+
+fn onAPClose() callconv(conv) void {
+    std.debug.print("onClose\n", .{});
+    state = .Closed;
+}
+
+fn onAPMessage(data: CStr, len: u64, op_code: i32) callconv(conv) void {
+    const dataPtr: [*]const u8 = @ptrCast(data);
+    const slice = dataPtr[0..@intCast(len)];
+    std.debug.print("onMessage ({}): {s}\n", .{ op_code, slice });
+    if (state == .Open) {
+        state = .RoomConnected;
+    }
+    if (state == .SlotConnected) {
+        state = .SlotConnected;
+    }
+}
+
+fn onAPError(msg: CStr) callconv(conv) void {
+    std.debug.print("onError: {s}\n", .{msg});
+    state = .Error;
+}
+
+fn onAPPong(data: CStr, len: u64) callconv(conv) void {
+    const data_ptr: [*]const u8 = @ptrCast(data);
+    const slice = data_ptr[0..@intCast(len)];
+    std.debug.print("onPong: {s}\n", .{slice});
+    if (state == .Pinging) {
+        if (mem.eql(u8, ping_msg, slice)) {
+            state = .GotPong;
+        } else {
+            std.debug.print("  expected {s} but got {s}\n", .{ ping_msg, slice });
+        }
+    }
+}
+
+fn syncAPSample(allocator: mem.Allocator, lib: Lib) !void {
+    state = .None;
+
     var server: ?TestServer = null;
     var server_thread: ?Thread = null;
     server, server_thread = try runTestServer(allocator, 38281);
     defer if (server != null) {
         Thread.sleep(1 * time.ns_per_ms); // wait for client connection to be dead
-        std.debug.print("Creating socket ...\n", .{});
-        server.?.stop();
-        server_thread.?.join();
-        server.?.deinit();
+        if (builtin.target.os.tag != .windows) { // see end of main()
+            std.debug.print("Stopping server ...\n", .{});
+            server.?.stop();
+            server_thread.?.join();
+            server.?.deinit();
+        }
     };
     Thread.sleep(1 * time.ns_per_ms);
 
@@ -185,11 +335,13 @@ pub fn main() !void {
     if (ws == null) {
         return error.CouldNotCreateSocket;
     }
-    lib.f.setOpenHandler(ws, onOpen);
-    lib.f.setCloseHandler(ws, onClose);
-    lib.f.setMessageHandler(ws, onMessage);
-    lib.f.setErrorHandler(ws, onError);
-    lib.f.setPongHandler(ws, onPong);
+    errdefer lib.f.delete(ws);
+
+    lib.f.setOpenHandler(ws, onAPOpen);
+    lib.f.setCloseHandler(ws, onAPClose);
+    lib.f.setMessageHandler(ws, onAPMessage);
+    lib.f.setErrorHandler(ws, onAPError);
+    lib.f.setPongHandler(ws, onAPPong);
 
     std.debug.print("Opening socket ... ", .{});
     const connectErr = lib.f.connect(ws);
@@ -197,6 +349,7 @@ pub fn main() !void {
     if (connectErr != .OK) {
         return error.CouldNotConnect;
     }
+    errdefer _ = lib.f.close(ws, 1001, "Going Away");
 
     for (0..100) |_| {
         _ = lib.f.poll(ws);
@@ -288,11 +441,6 @@ pub fn main() !void {
     std.debug.print("Destroying socket ...\n", .{});
     lib.f.delete(ws);
     std.debug.print("Socket destroyed.\n", .{});
-
-    if (builtin.target.os.tag == .windows and server != null) {
-        // server worker thread may not stop -> just exit
-        std.process.exit(0);
-    }
 }
 
 const websocket = @import("websocket");
