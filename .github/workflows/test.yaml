@@ -31,7 +31,11 @@ jobs:
         timeout-minutes: 10  # this step may compile a lot
         run: |
           zig build test
-      - name: Run sample
+      - name: Run sample (Debug)
         timeout-minutes: 2
         run: |
           zig build run
+      - name: Run sample (Release)
+        timeout-minutes: 10  # this step may compile a lot
+        run: |
+          zig build run -Doptimize=ReleaseSmall

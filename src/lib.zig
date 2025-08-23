@@ -13,7 +13,8 @@ const conv = CallingConvention.c;
 
 const CStr = [*c]const u8;
 
-var opt_gpa: ?std.heap.DebugAllocator(.{}) = null;
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+const is_debug = builtin.mode == .Debug;
 
 const WsppError = enum(c_int) {
     OK = 0,
@@ -23,15 +24,12 @@ const WsppError = enum(c_int) {
 };
 
 fn wspp_init() callconv(conv) void {
-    if (opt_gpa == null) {
-        opt_gpa = std.heap.DebugAllocator(.{}){};
-    }
 }
 
 fn wspp_deinit() callconv(conv) void {
-    if (opt_gpa) |gpa| {
-        gpa.deinit();
-        opt_gpa = null;
+    if (is_debug) {
+        debug_allocator.deinit();
+        debug_allocator = .init;
     }
 }
 
@@ -43,7 +41,7 @@ pub export fn wspp_new(uriString: CStr) callconv(conv) ?*WS {
         return null;
     }
     wspp_init();
-    const allocator = opt_gpa.?.allocator();
+    const allocator = if (is_debug) debug_allocator.allocator() else std.heap.smp_allocator;
     const ws = allocator.create(WS) catch return null;
     const uri = Uri.parse(mem.span(uriString)) catch {
         allocator.destroy(ws);
@@ -64,10 +62,7 @@ pub export fn wspp_new(uriString: CStr) callconv(conv) ?*WS {
 
 pub export fn wspp_delete(wspp: ?*WS) callconv(conv) void {
     if (wspp) |ptr| {
-        if (opt_gpa == null) {
-            return; // panic?
-        }
-        const allocator = opt_gpa.?.allocator();
+        const allocator = if (is_debug) debug_allocator.allocator() else std.heap.smp_allocator;
         _ = wspp_close(ptr, 1001, "Going Away");
         allocator.destroy(ptr);
     }
