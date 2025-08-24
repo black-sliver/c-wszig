@@ -89,7 +89,7 @@ pub fn poll(self: *Self) u64 {
     var events: u64 = 0;
     var locked = false;
     for (0..16) |_| {
-        if (comptime builtin.target.os.tag == .windows) {
+        if (false) { //}comptime builtin.target.os.tag == .windows) {
             // On Windows, we can't read and write at the same time
             self.mutex.lock();
             locked = true;
